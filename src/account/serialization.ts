@@ -16,6 +16,8 @@ import type {
   OperationRaw,
   SubAccount,
   SubAccountRaw,
+  NFT,
+  NFTRaw,
 } from "../types";
 import type { TronResources, TronResourcesRaw } from "../families/tron/types";
 import {
@@ -101,6 +103,7 @@ export const toOperationRaw = (
     fee,
     subOperations,
     internalOperations,
+    nftOperations,
     extra,
     id,
     hash,
@@ -160,6 +163,10 @@ export const toOperationRaw = (
     copy.internalOperations = internalOperations.map((o) => toOperationRaw(o));
   }
 
+  if (nftOperations) {
+    copy.nftOperations = nftOperations.map((o) => toOperationRaw(o));
+  }
+
   return copy;
 };
 export const inferSubOperations = (
@@ -198,6 +205,7 @@ export const fromOperationRaw = (
     extra,
     subOperations,
     internalOperations,
+    nftOperations,
     id,
     hash,
     type,
@@ -258,6 +266,12 @@ export const fromOperationRaw = (
 
   if (internalOperations) {
     res.internalOperations = internalOperations.map((o) =>
+      fromOperationRaw(o, o.accountId)
+    );
+  }
+
+  if (nftOperations) {
+    res.nftOperations = nftOperations.map((o) =>
       fromOperationRaw(o, o.accountId)
     );
   }
@@ -677,6 +691,7 @@ export function fromAccountRaw(rawAccount: AccountRaw): Account {
     polkadotResources,
     elrondResources,
     cryptoOrgResources,
+    nfts,
   } = rawAccount;
   const subAccounts =
     subAccountsRaw &&
@@ -734,6 +749,7 @@ export function fromAccountRaw(rawAccount: AccountRaw): Account {
     swapHistory: [],
     syncHash,
     balanceHistoryCache: balanceHistoryCache || emptyHistoryCache,
+    nfts: nfts?.map((n) => fromNFTRaw(n)),
   };
   res.balanceHistoryCache = generateHistoryFromOperations(res);
 
@@ -834,6 +850,7 @@ export function toAccountRaw({
   polkadotResources,
   elrondResources,
   cryptoOrgResources,
+  nfts,
 }: Account): AccountRaw {
   const res: AccountRaw = {
     id,
@@ -857,6 +874,7 @@ export function toAccountRaw({
     lastSyncDate: lastSyncDate.toISOString(),
     balance: balance.toString(),
     spendableBalance: spendableBalance.toString(),
+    nfts: nfts?.map((n) => toNFTRaw(n)),
   };
 
   if (balanceHistory) {
@@ -913,4 +931,22 @@ export function toAccountRaw({
     res.cryptoOrgResources = toCryptoOrgResourcesRaw(cryptoOrgResources);
   }
   return res;
+}
+
+export function toNFTRaw({ id, tokenId, amount, collection }: NFT): NFTRaw {
+  return {
+    id,
+    tokenId,
+    amount: amount.toFixed(),
+    collection,
+  };
+}
+
+export function fromNFTRaw({ id, tokenId, amount, collection }: NFTRaw): NFT {
+  return {
+    id,
+    tokenId,
+    amount: new BigNumber(amount),
+    collection,
+  };
 }
